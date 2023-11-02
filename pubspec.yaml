@@ -1,0 +1,29 @@
+name: cbj_smart_device_flutter
+description: A new Flutter project.
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.5 <4.0.0'
+
+dependencies:
+  burt_network:
+    git: https://github.com/BinghamtonRover/Dart-Networking
+  flutter:
+    sdk: flutter
+  cbj_smart_device:
+    path: ../cbj_smart_device
+  cupertino_icons: ^1.0.6
+  image_picker: ^1.0.4
+  camera: ^0.10.5+5
+  video_player: ^2.8.1
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

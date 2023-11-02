@@ -1,1 +1,1 @@
-# cbj_smart_device_flutter
+# CBJ Smart Device Flutter
