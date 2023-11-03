@@ -6,8 +6,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_server/protoc_as_dart/cbj_smart_device_server.pbgrpc.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
-import 'package:cbj_smart_device_flutter/infrastructure/from_video/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -717,12 +717,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         return;
       }
       Uint8List data = await file.readAsBytes();
-      sendFrame(data);
-      // setState(() {
-      //   imageFile = file;
-      //   videoController?.dispose();
-      //   videoController = null;
-      // });
+      SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
+          CbjRequestsAndStatusFromHub(
+              allRemoteCommands: CbjAllRemoteCommands(
+                  smartDeviceInfo:
+                      CbjSmartDeviceInfo(stateMassage: data.toString()))));
+
       showInSnackBar('Picture saved to ${file.path}');
     });
   }

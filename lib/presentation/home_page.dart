@@ -1,5 +1,5 @@
-import 'package:cbj_smart_device_flutter/presentation/smart_camera_page.dart';
-import 'package:cbj_smart_device_flutter/presentation/video_player_page.dart';
+import 'package:cbj_smart_device_flutter/presentation/client/video_player_page.dart';
+import 'package:cbj_smart_device_flutter/presentation/server/smart_camera_page.dart';
 import 'package:flutter/material.dart';
 
 class HomePage extends StatelessWidget {

@@ -7,8 +7,6 @@ environment:
   sdk: '>=3.1.5 <4.0.0'
 
 dependencies:
-  burt_network:
-    git: https://github.com/BinghamtonRover/Dart-Networking
   flutter:
     sdk: flutter
   cbj_smart_device:
