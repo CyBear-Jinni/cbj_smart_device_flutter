@@ -117,56 +117,65 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   // #docregion AppLifecycle
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final CameraController? cameraController = controller;
-
     // App state changed before we got the chance to initialize.
-    if (cameraController == null || !cameraController.value.isInitialized) {
+    if (controller == null || !controller!.value.isInitialized) {
       return;
     }
 
     if (state == AppLifecycleState.inactive) {
-      cameraController.dispose();
+      controller!.dispose();
     } else if (state == AppLifecycleState.resumed) {
-      _initializeCameraController(cameraController.description);
+      _initializeCameraController(controller!.description);
     }
   }
 
-  Future<XFile?> takePicture() async {
-    final CameraController? cameraController = controller;
-    if (cameraController == null || !cameraController.value.isInitialized) {
+  Future<Uint8List?> takePicture() async {
+    if (controller == null || !controller!.value.isInitialized) {
       showInSnackBar('Error: select a camera first.');
       return null;
     }
 
-    if (cameraController.value.isTakingPicture) {
+    if (controller!.value.isTakingPicture) {
       // A capture is already pending, do nothing.
       return null;
     }
-
+    XFile file;
     try {
-      final XFile file = await cameraController.takePicture();
-
-      return file;
+      file = await controller!.takePicture();
     } on CameraException catch (e) {
       _showCameraException(e);
       return null;
     }
+    return await file.readAsBytes();
   }
 
-  void onTakePictureButtonPressed() {
-    takePicture().then((XFile? file) async {
-      if (!mounted || file == null) {
-        return;
-      }
-      Uint8List data = await file.readAsBytes();
-      SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
-          CbjRequestsAndStatusFromHub(
-              allRemoteCommands: CbjAllRemoteCommands(
-                  smartDeviceInfo:
-                      CbjSmartDeviceInfo(stateMassage: data.toString()))));
+  Future<Uint8List?> getImageBytes() async {
+    if (controller == null || !controller!.value.isInitialized) {
+      showInSnackBar('Error: select a camera first.');
+      return null;
+    }
 
-      showInSnackBar('Picture saved to ${file.path}');
-    });
+    final completer = Completer<CameraImage>();
+    // TODO: Keep image stream open
+    await controller!
+        .startImageStream(completer.complete)
+        .then((_) => controller!.stopImageStream());
+    final CameraImage image = await completer.future;
+    return image.planes[0].bytes;
+  }
+
+  void onTakePictureButtonPressed() async {
+    // Uint8List? imageBytes = await getImageBytes();
+    Uint8List? imageBytes = await takePicture();
+    if (imageBytes == null) {
+      return;
+    }
+
+    SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
+        CbjRequestsAndStatusFromHub(
+            allRemoteCommands: CbjAllRemoteCommands(
+                smartDeviceInfo:
+                    CbjSmartDeviceInfo(stateMassage: imageBytes.toString()))));
   }
 
   // #enddocregion AppLifecycle
@@ -211,9 +220,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   /// Display the preview from the camera (or a message if the preview is not available).
   Widget _cameraPreviewWidget() {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isInitialized) {
+    if (controller == null || !controller!.value.isInitialized) {
       return const Text(
         'Tap a camera',
         style: TextStyle(
@@ -528,60 +535,17 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   /// Display the control bar with buttons to take pictures and record videos.
   Widget _captureControlRowWidget() {
-    final CameraController? cameraController = controller;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: <Widget>[
         IconButton(
           icon: const Icon(Icons.camera_alt),
           color: Colors.blue,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  !cameraController.value.isRecordingVideo
+          onPressed: controller != null &&
+                  controller!.value.isInitialized &&
+                  !controller!.value.isRecordingVideo
               ? onTakePictureButtonPressed
               : null,
-        ),
-        IconButton(
-          icon: const Icon(Icons.videocam),
-          color: Colors.blue,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  !cameraController.value.isRecordingVideo
-              ? onVideoRecordButtonPressed
-              : null,
-        ),
-        IconButton(
-          icon: cameraController != null &&
-                  cameraController.value.isRecordingPaused
-              ? const Icon(Icons.play_arrow)
-              : const Icon(Icons.pause),
-          color: Colors.blue,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  cameraController.value.isRecordingVideo
-              ? (cameraController.value.isRecordingPaused)
-                  ? onResumeButtonPressed
-                  : onPauseButtonPressed
-              : null,
-        ),
-        IconButton(
-          icon: const Icon(Icons.stop),
-          color: Colors.red,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  cameraController.value.isRecordingVideo
-              ? onStopButtonPressed
-              : null,
-        ),
-        IconButton(
-          icon: const Icon(Icons.pause_presentation),
-          color:
-              cameraController != null && cameraController.value.isPreviewPaused
-                  ? Colors.red
-                  : Colors.blue,
-          onPressed:
-              cameraController == null ? null : onPausePreviewButtonPressed,
         ),
       ],
     );
@@ -812,130 +776,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     });
   }
 
-  void onVideoRecordButtonPressed() {
-    startVideoRecording().then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
-  }
-
-  void onStopButtonPressed() {
-    stopVideoRecording().then((XFile? file) {
-      if (mounted) {
-        setState(() {});
-      }
-      if (file != null) {
-        showInSnackBar('Video recorded to ${file.path}');
-        videoFile = file;
-        _startVideoPlayer();
-      }
-    });
-  }
-
-  Future<void> onPausePreviewButtonPressed() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      showInSnackBar('Error: select a camera first.');
-      return;
-    }
-
-    if (cameraController.value.isPreviewPaused) {
-      await cameraController.resumePreview();
-    } else {
-      await cameraController.pausePreview();
-    }
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  void onPauseButtonPressed() {
-    pauseVideoRecording().then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-      showInSnackBar('Video recording paused');
-    });
-  }
-
-  void onResumeButtonPressed() {
-    resumeVideoRecording().then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-      showInSnackBar('Video recording resumed');
-    });
-  }
-
-  Future<void> startVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      showInSnackBar('Error: select a camera first.');
-      return;
-    }
-
-    if (cameraController.value.isRecordingVideo) {
-      // A recording is already started, do nothing.
-      return;
-    }
-
-    try {
-      await cameraController.startVideoRecording();
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      return;
-    }
-  }
-
-  Future<XFile?> stopVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
-      return null;
-    }
-
-    try {
-      return cameraController.stopVideoRecording();
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      return null;
-    }
-  }
-
-  Future<void> pauseVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
-      return;
-    }
-
-    try {
-      await cameraController.pauseVideoRecording();
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      rethrow;
-    }
-  }
-
-  Future<void> resumeVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
-      return;
-    }
-
-    try {
-      await cameraController.resumeVideoRecording();
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      rethrow;
-    }
-  }
-
   Future<void> setFlashMode(FlashMode mode) async {
     if (controller == null) {
       return;
@@ -988,12 +828,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     } on CameraException catch (e) {
       _showCameraException(e);
       rethrow;
-    }
-  }
-
-  Future<void> _startVideoPlayer() async {
-    if (videoFile == null) {
-      return;
     }
   }
 
