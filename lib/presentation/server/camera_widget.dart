@@ -12,8 +12,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-List<CameraDescription> cameras = <CameraDescription>[];
-
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
   /// Default Constructor
@@ -25,29 +23,10 @@ class CameraExampleHome extends StatefulWidget {
   }
 }
 
-/// Returns a suitable camera icon for [direction].
-IconData getCameraLensIcon(CameraLensDirection direction) {
-  switch (direction) {
-    case CameraLensDirection.back:
-      return Icons.camera_rear;
-    case CameraLensDirection.front:
-      return Icons.camera_front;
-    case CameraLensDirection.external:
-      return Icons.camera;
-  }
-  // This enum is from a different package, so a new value could be added at
-  // any time. The example should keep working if that happens.
-  // ignore: dead_code
-  return Icons.camera;
-}
-
-void _logError(String code, String? message) {
-  // ignore: avoid_print
-  print('Error: $code${message == null ? '' : '\nError Message: $message'}');
-}
-
 class _CameraExampleHomeState extends State<CameraExampleHome>
     with WidgetsBindingObserver, TickerProviderStateMixin {
+  List<CameraDescription>? cameras;
+
   CameraController? controller;
   XFile? imageFile;
   XFile? videoFile;
@@ -76,6 +55,16 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (Platform.isAndroid || Platform.isIOS) {
+      availableCameras().then((value) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          cameras = value;
+        });
+      });
+    }
 
     smartServerUseCase = CbjSmartDeviceServerU();
     smartServerUseCase!.startLocalServer();
@@ -182,6 +171,10 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   @override
   Widget build(BuildContext context) {
+    if (cameras == null) {
+      return const Text('Cameras are null');
+    }
+
     return Column(
       children: <Widget>[
         Expanded(
@@ -551,6 +544,27 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     );
   }
 
+  /// Returns a suitable camera icon for [direction].
+  IconData getCameraLensIcon(CameraLensDirection direction) {
+    switch (direction) {
+      case CameraLensDirection.back:
+        return Icons.camera_rear;
+      case CameraLensDirection.front:
+        return Icons.camera_front;
+      case CameraLensDirection.external:
+        return Icons.camera;
+    }
+    // This enum is from a different package, so a new value could be added at
+    // any time. The example should keep working if that happens.
+    // ignore: dead_code
+    return Icons.camera;
+  }
+
+  void _logError(String code, String? message) {
+    // ignore: avoid_print
+    print('Error: $code${message == null ? '' : '\nError Message: $message'}');
+  }
+
   /// Display a row of toggle to select the camera (or a message if no camera is available).
   Widget _cameraTogglesRowWidget() {
     final List<Widget> toggles = <Widget>[];
@@ -563,13 +577,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       onNewCameraSelected(description);
     }
 
-    if (cameras.isEmpty) {
+    if (cameras!.isEmpty) {
       SchedulerBinding.instance.addPostFrameCallback((_) async {
         showInSnackBar('No camera found.');
       });
       return const Text('None');
     } else {
-      for (final CameraDescription cameraDescription in cameras) {
+      for (final CameraDescription cameraDescription in cameras!) {
         toggles.add(
           SizedBox(
             width: 90.0,

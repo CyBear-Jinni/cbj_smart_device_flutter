@@ -6,10 +6,10 @@ import 'package:cbj_smart_device/utils.dart';
 import 'package:grpc/grpc.dart';
 
 class SmartDeviceClient {
-  static ClientChannel? channel;
-  static CbjSmartDeviceConnectionsClient? stub;
+  ClientChannel? channel;
+  CbjSmartDeviceConnectionsClient? stub;
 
-  static Future createStreamWithSmartDevice(
+  Future createStreamWithSmartDevice(
     String addressToHub,
     int hubPort,
   ) async {
@@ -38,7 +38,7 @@ class SmartDeviceClient {
     }
   }
 
-  static Future<ClientChannel> _createCbjSmartDeviceClient(
+  Future<ClientChannel> _createCbjSmartDeviceClient(
     String deviceIp,
     int hubPort,
   ) async {

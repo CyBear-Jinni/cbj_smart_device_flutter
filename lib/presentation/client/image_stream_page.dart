@@ -14,11 +14,11 @@ class ImageStreamPage extends StatefulWidget {
 }
 
 class _ImageStreamPageState extends State<ImageStreamPage> {
-  SmartDeviceClient? smartDeviceClient = SmartDeviceClient();
+  SmartDeviceClient smartDeviceClient = SmartDeviceClient();
   ui.Image? image;
 
   Future videoStream() async {
-    await SmartDeviceClient.createStreamWithSmartDevice('192.168.31.75', 50054);
+    await smartDeviceClient.createStreamWithSmartDevice('192.168.31.75', 50054);
 
     print('Listen to Stream');
 
@@ -37,7 +37,9 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
 
       ui.Codec codec = await ui.instantiateImageCodec(ulist);
       ui.FrameInfo frame = await codec.getNextFrame();
-
+      if (!mounted) {
+        return;
+      }
       setState(() {
         image = frame.image;
       });
