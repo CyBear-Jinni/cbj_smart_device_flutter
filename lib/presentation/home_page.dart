@@ -1,4 +1,4 @@
-import 'package:cbj_smart_device_flutter/presentation/client/video_player_page.dart';
+import 'package:cbj_smart_device_flutter/presentation/client/image_stream_page.dart';
 import 'package:cbj_smart_device_flutter/presentation/server/smart_camera_page.dart';
 import 'package:flutter/material.dart';
 
@@ -32,7 +32,7 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const VideoPlayerPage(),
+                  builder: (context) => const ImageStreamPage(),
                 ),
               );
             },

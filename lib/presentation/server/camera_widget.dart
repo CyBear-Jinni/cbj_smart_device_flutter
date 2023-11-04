@@ -11,7 +11,8 @@ import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_serve
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:video_player/video_player.dart';
+
+List<CameraDescription> cameras = <CameraDescription>[];
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -50,7 +51,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   CameraController? controller;
   XFile? imageFile;
   XFile? videoFile;
-  VideoPlayerController? videoController;
   VoidCallback? videoPlayerListener;
   bool enableAudio = true;
   double _minAvailableExposureOffset = 0.0;
@@ -130,49 +130,82 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       _initializeCameraController(cameraController.description);
     }
   }
+
+  Future<XFile?> takePicture() async {
+    final CameraController? cameraController = controller;
+    if (cameraController == null || !cameraController.value.isInitialized) {
+      showInSnackBar('Error: select a camera first.');
+      return null;
+    }
+
+    if (cameraController.value.isTakingPicture) {
+      // A capture is already pending, do nothing.
+      return null;
+    }
+
+    try {
+      final XFile file = await cameraController.takePicture();
+
+      return file;
+    } on CameraException catch (e) {
+      _showCameraException(e);
+      return null;
+    }
+  }
+
+  void onTakePictureButtonPressed() {
+    takePicture().then((XFile? file) async {
+      if (!mounted || file == null) {
+        return;
+      }
+      Uint8List data = await file.readAsBytes();
+      SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
+          CbjRequestsAndStatusFromHub(
+              allRemoteCommands: CbjAllRemoteCommands(
+                  smartDeviceInfo:
+                      CbjSmartDeviceInfo(stateMassage: data.toString()))));
+
+      showInSnackBar('Picture saved to ${file.path}');
+    });
+  }
+
   // #enddocregion AppLifecycle
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Camera example'),
-      ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black,
-                border: Border.all(
-                  color:
-                      controller != null && controller!.value.isRecordingVideo
-                          ? Colors.redAccent
-                          : Colors.grey,
-                  width: 3.0,
-                ),
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.black,
+              border: Border.all(
+                color: controller != null && controller!.value.isRecordingVideo
+                    ? Colors.redAccent
+                    : Colors.grey,
+                width: 3.0,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(1.0),
-                child: Center(
-                  child: _cameraPreviewWidget(),
-                ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(1.0),
+              child: Center(
+                child: _cameraPreviewWidget(),
               ),
             ),
           ),
-          _captureControlRowWidget(),
-          _modeControlRowWidget(),
-          Padding(
-            padding: const EdgeInsets.all(5.0),
-            child: Row(
-              children: <Widget>[
-                _cameraTogglesRowWidget(),
-                _thumbnailWidget(),
-              ],
-            ),
+        ),
+        _captureControlRowWidget(),
+        _modeControlRowWidget(),
+        Padding(
+          padding: const EdgeInsets.all(5.0),
+          child: Row(
+            children: <Widget>[
+              _cameraTogglesRowWidget(),
+              _thumbnailWidget(),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -228,40 +261,26 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   /// Display the thumbnail of the captured image or video.
   Widget _thumbnailWidget() {
-    final VideoPlayerController? localVideoController = videoController;
-
     return Expanded(
       child: Align(
         alignment: Alignment.centerRight,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (localVideoController == null && imageFile == null)
+            if (imageFile == null)
               Container()
             else
               SizedBox(
-                width: 64.0,
-                height: 64.0,
-                child: (localVideoController == null)
-                    ? (
-                        // The captured image on the web contains a network-accessible URL
-                        // pointing to a location within the browser. It may be displayed
-                        // either with Image.network or Image.memory after loading the image
-                        // bytes to memory.
-                        kIsWeb
-                            ? Image.network(imageFile!.path)
-                            : Image.file(File(imageFile!.path)))
-                    : Container(
-                        decoration: BoxDecoration(
-                            border: Border.all(color: Colors.pink)),
-                        child: Center(
-                          child: AspectRatio(
-                              aspectRatio:
-                                  localVideoController.value.aspectRatio,
-                              child: VideoPlayer(localVideoController)),
-                        ),
-                      ),
-              ),
+                  width: 64.0,
+                  height: 64.0,
+                  child:
+                      // The captured image on the web contains a network-accessible URL
+                      // pointing to a location within the browser. It may be displayed
+                      // either with Image.network or Image.memory after loading the image
+                      // bytes to memory.
+                      kIsWeb
+                          ? Image.network(imageFile!.path)
+                          : Image.file(File(imageFile!.path))),
           ],
         ),
       ),
@@ -711,22 +730,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  void onTakePictureButtonPressed() {
-    takePicture().then((XFile? file) async {
-      if (!mounted || file == null) {
-        return;
-      }
-      Uint8List data = await file.readAsBytes();
-      SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
-          CbjRequestsAndStatusFromHub(
-              allRemoteCommands: CbjAllRemoteCommands(
-                  smartDeviceInfo:
-                      CbjSmartDeviceInfo(stateMassage: data.toString()))));
-
-      showInSnackBar('Picture saved to ${file.path}');
-    });
-  }
-
   void onFlashModeButtonPressed() {
     if (_flashModeControlRowAnimationController.value == 1) {
       _flashModeControlRowAnimationController.reverse();
@@ -992,56 +995,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     if (videoFile == null) {
       return;
     }
-
-    final VideoPlayerController vController = kIsWeb
-        // TODO(gabrielokura): remove the ignore once the following line can migrate to
-        // use VideoPlayerController.networkUrl after the issue is resolved.
-        // https://github.com/flutter/flutter/issues/121927
-        // ignore: deprecated_member_use
-        ? VideoPlayerController.network(videoFile!.path)
-        : VideoPlayerController.file(File(videoFile!.path));
-
-    videoPlayerListener = () {
-      if (videoController != null) {
-        // Refreshing the state to update video player with the correct ratio.
-        if (mounted) {
-          setState(() {});
-        }
-        videoController!.removeListener(videoPlayerListener!);
-      }
-    };
-    vController.addListener(videoPlayerListener!);
-    await vController.setLooping(true);
-    await vController.initialize();
-    await videoController?.dispose();
-    if (mounted) {
-      setState(() {
-        imageFile = null;
-        videoController = vController;
-      });
-    }
-    await vController.play();
-  }
-
-  Future<XFile?> takePicture() async {
-    final CameraController? cameraController = controller;
-    if (cameraController == null || !cameraController.value.isInitialized) {
-      showInSnackBar('Error: select a camera first.');
-      return null;
-    }
-
-    if (cameraController.value.isTakingPicture) {
-      // A capture is already pending, do nothing.
-      return null;
-    }
-
-    try {
-      final XFile file = await cameraController.takePicture();
-      return file;
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      return null;
-    }
   }
 
   void _showCameraException(CameraException e) {
@@ -1049,5 +1002,3 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     showInSnackBar('Error: ${e.code}\n${e.description}');
   }
 }
-
-List<CameraDescription> cameras = <CameraDescription>[];

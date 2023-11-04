@@ -6,14 +6,14 @@ import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_serve
 import 'package:cbj_smart_device_flutter/presentation/client/smart_device_client.dart';
 import 'package:flutter/material.dart';
 
-class VideoPlayerPage extends StatefulWidget {
-  const VideoPlayerPage({super.key});
+class ImageStreamPage extends StatefulWidget {
+  const ImageStreamPage({super.key});
 
   @override
-  State<VideoPlayerPage> createState() => _VideoPlayerPageState();
+  State<ImageStreamPage> createState() => _ImageStreamPageState();
 }
 
-class _VideoPlayerPageState extends State<VideoPlayerPage> {
+class _ImageStreamPageState extends State<ImageStreamPage> {
   SmartDeviceClient? smartDeviceClient = SmartDeviceClient();
   ui.Image? image;
 
@@ -54,7 +54,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Video Player'),
+        title: const Text('Image Stream'),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -63,13 +63,14 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           const SizedBox(width: double.infinity),
           TextButton(
             onPressed: () {},
-            child: const Text('This is video player'),
+            child: const Text('This is image steam'),
           ),
           if (image != null)
-            Row(
-              children: [
-                Expanded(child: RawImage(image: image, fit: BoxFit.contain)),
-              ],
+            Expanded(
+              child: RawImage(
+                image: image,
+                fit: BoxFit.scaleDown,
+              ),
             ),
         ],
       ),
