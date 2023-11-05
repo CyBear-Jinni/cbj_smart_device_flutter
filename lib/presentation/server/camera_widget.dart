@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_server/protoc_as_dart/cbj_smart_device_server.pbgrpc.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
+import 'package:cbj_smart_device_flutter/test2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -43,11 +44,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   late Animation<double> _focusModeControlRowAnimation;
   double _minAvailableZoom = 1.0;
   double _maxAvailableZoom = 1.0;
-  double _currentScale = 1.0;
-  double _baseScale = 1.0;
-
-  // Counting pointers (number of user fingers on screen)
-  int _pointers = 0;
 
   CbjSmartDeviceServerU? smartServerUseCase;
 
@@ -118,26 +114,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<Uint8List?> takePicture() async {
-    if (controller == null || !controller!.value.isInitialized) {
-      showInSnackBar('Error: select a camera first.');
-      return null;
-    }
-
-    if (controller!.value.isTakingPicture) {
-      // A capture is already pending, do nothing.
-      return null;
-    }
-    XFile file;
-    try {
-      file = await controller!.takePicture();
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      return null;
-    }
-    return await file.readAsBytes();
-  }
-
   Future<Uint8List?> getImageBytes() async {
     if (controller == null || !controller!.value.isInitialized) {
       showInSnackBar('Error: select a camera first.');
@@ -149,22 +125,16 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     await controller!
         .startImageStream(completer.complete)
         .then((_) => controller!.stopImageStream());
-    final CameraImage image = await completer.future;
-    return image.planes[0].bytes;
+    final Uint8List image = await controller!.inMemoryImage;
+    return image;
   }
 
-  void onTakePictureButtonPressed() async {
-    // Uint8List? imageBytes = await getImageBytes();
-    Uint8List? imageBytes = await takePicture();
-    if (imageBytes == null) {
-      return;
-    }
-
+  void onTakePicture(Uint8List uint8list) async {
     SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
         CbjRequestsAndStatusFromHub(
             allRemoteCommands: CbjAllRemoteCommands(
                 smartDeviceInfo:
-                    CbjSmartDeviceInfo(stateMassage: imageBytes.toString()))));
+                    CbjSmartDeviceInfo(stateMassage: uint8list.toString()))));
   }
 
   // #enddocregion AppLifecycle
@@ -196,7 +166,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
             ),
           ),
         ),
-        _captureControlRowWidget(),
         _modeControlRowWidget(),
         Padding(
           padding: const EdgeInsets.all(5.0),
@@ -223,40 +192,27 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         ),
       );
     } else {
-      return Listener(
-        onPointerDown: (_) => _pointers++,
-        onPointerUp: (_) => _pointers--,
-        child: CameraPreview(
-          controller!,
-          child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onScaleStart: _handleScaleStart,
-              onScaleUpdate: _handleScaleUpdate,
-              onTapDown: (TapDownDetails details) =>
-                  onViewFinderTap(details, constraints),
-            );
-          }),
-        ),
-      );
+      return CameraPreviewPage(
+          camera: controller!.description, onTakePicture: onTakePicture);
+
+      // return Listener(
+      //   onPointerDown: (_) => _pointers++,
+      //   onPointerUp: (_) => _pointers--,
+      //   child: CameraPreview(
+      //     controller!,
+      //     child: LayoutBuilder(
+      //         builder: (BuildContext context, BoxConstraints constraints) {
+      //       return GestureDetector(
+      //         behavior: HitTestBehavior.opaque,
+      //         onScaleStart: _handleScaleStart,
+      //         onScaleUpdate: _handleScaleUpdate,
+      //         onTapDown: (TapDownDetails details) =>
+      //             onViewFinderTap(details, constraints),
+      //       );
+      //     }),
+      //   ),
+      // );
     }
-  }
-
-  void _handleScaleStart(ScaleStartDetails details) {
-    _baseScale = _currentScale;
-  }
-
-  Future<void> _handleScaleUpdate(ScaleUpdateDetails details) async {
-    // When there are not exactly two fingers on screen don't scale
-    if (controller == null || _pointers != 2) {
-      return;
-    }
-
-    _currentScale = (_baseScale * details.scale)
-        .clamp(_minAvailableZoom, _maxAvailableZoom);
-
-    await controller!.setZoomLevel(_currentScale);
   }
 
   /// Display the thumbnail of the captured image or video.
@@ -526,24 +482,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     );
   }
 
-  /// Display the control bar with buttons to take pictures and record videos.
-  Widget _captureControlRowWidget() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.camera_alt),
-          color: Colors.blue,
-          onPressed: controller != null &&
-                  controller!.value.isInitialized &&
-                  !controller!.value.isRecordingVideo
-              ? onTakePictureButtonPressed
-              : null,
-        ),
-      ],
-    );
-  }
-
   /// Returns a suitable camera icon for [direction].
   IconData getCameraLensIcon(CameraLensDirection direction) {
     switch (direction) {
@@ -569,14 +507,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   Widget _cameraTogglesRowWidget() {
     final List<Widget> toggles = <Widget>[];
 
-    void onChanged(CameraDescription? description) {
-      if (description == null) {
-        return;
-      }
-
-      onNewCameraSelected(description);
-    }
-
     if (cameras!.isEmpty) {
       SchedulerBinding.instance.addPostFrameCallback((_) async {
         showInSnackBar('No camera found.');
@@ -591,7 +521,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
               title: Icon(getCameraLensIcon(cameraDescription.lensDirection)),
               groupValue: controller?.description,
               value: cameraDescription,
-              onChanged: onChanged,
+              onChanged: onNewCameraSelected,
             ),
           ),
         );
@@ -613,17 +543,19 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       return;
     }
 
-    final CameraController cameraController = controller!;
-
     final Offset offset = Offset(
       details.localPosition.dx / constraints.maxWidth,
       details.localPosition.dy / constraints.maxHeight,
     );
-    cameraController.setExposurePoint(offset);
-    cameraController.setFocusPoint(offset);
+    controller!.setExposurePoint(offset);
+    controller!.setFocusPoint(offset);
   }
 
-  Future<void> onNewCameraSelected(CameraDescription cameraDescription) async {
+  Future<void> onNewCameraSelected(CameraDescription? cameraDescription) async {
+    if (cameraDescription == null) {
+      return;
+    }
+
     if (controller != null) {
       return controller!.setDescription(cameraDescription);
     } else {
@@ -633,43 +565,40 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   Future<void> _initializeCameraController(
       CameraDescription cameraDescription) async {
-    final CameraController cameraController = CameraController(
+    controller = CameraController(
       cameraDescription,
       kIsWeb ? ResolutionPreset.max : ResolutionPreset.medium,
       enableAudio: enableAudio,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
 
-    controller = cameraController;
-
     // If the controller is updated then update the UI.
-    cameraController.addListener(() {
+    controller!.addListener(() {
       if (mounted) {
         setState(() {});
       }
-      if (cameraController.value.hasError) {
-        showInSnackBar(
-            'Camera error ${cameraController.value.errorDescription}');
+      if (controller!.value.hasError) {
+        showInSnackBar('Camera error ${controller!.value.errorDescription}');
       }
     });
 
     try {
-      await cameraController.initialize();
+      await controller!.initialize();
       await Future.wait(<Future<Object?>>[
         // The exposure mode is currently not supported on the web.
         ...!kIsWeb
             ? <Future<Object?>>[
-                cameraController.getMinExposureOffset().then(
+                controller!.getMinExposureOffset().then(
                     (double value) => _minAvailableExposureOffset = value),
-                cameraController
+                controller!
                     .getMaxExposureOffset()
                     .then((double value) => _maxAvailableExposureOffset = value)
               ]
             : <Future<Object?>>[],
-        cameraController
+        controller!
             .getMaxZoomLevel()
             .then((double value) => _maxAvailableZoom = value),
-        cameraController
+        controller!
             .getMinZoomLevel()
             .then((double value) => _minAvailableZoom = value),
       ]);
@@ -748,14 +677,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   Future<void> onCaptureOrientationLockButtonPressed() async {
     try {
       if (controller != null) {
-        final CameraController cameraController = controller!;
-        if (cameraController.value.isCaptureOrientationLocked) {
-          await cameraController.unlockCaptureOrientation();
+        if (controller!.value.isCaptureOrientationLocked) {
+          await controller!.unlockCaptureOrientation();
           showInSnackBar('Capture orientation unlocked');
         } else {
-          await cameraController.lockCaptureOrientation();
+          await controller!.lockCaptureOrientation();
           showInSnackBar(
-              'Capture orientation locked to ${cameraController.value.lockedCaptureOrientation.toString().split('.').last}');
+              'Capture orientation locked to ${controller!.value.lockedCaptureOrientation.toString().split('.').last}');
         }
       }
     } on CameraException catch (e) {
