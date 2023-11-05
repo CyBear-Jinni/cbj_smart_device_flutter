@@ -8,7 +8,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_server/protoc_as_dart/cbj_smart_device_server.pbgrpc.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
-import 'package:cbj_smart_device_flutter/test2.dart';
+import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -32,7 +32,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   XFile? imageFile;
   XFile? videoFile;
   VoidCallback? videoPlayerListener;
-  bool enableAudio = true;
   double _minAvailableExposureOffset = 0.0;
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
@@ -130,6 +129,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   }
 
   void onTakePicture(Uint8List uint8list) async {
+    print('unit8List size ${uint8list.length}');
     SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
         CbjRequestsAndStatusFromHub(
             allRemoteCommands: CbjAllRemoteCommands(
@@ -193,7 +193,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       );
     } else {
       return CameraPreviewPage(
-          camera: controller!.description, onTakePicture: onTakePicture);
+          cameraController: controller!, onTakePicture: onTakePicture);
 
       // return Listener(
       //   onPointerDown: (_) => _pointers++,
@@ -273,11 +273,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                     )
                   ]
                 : <Widget>[],
-            IconButton(
-              icon: Icon(enableAudio ? Icons.volume_up : Icons.volume_mute),
-              color: Colors.blue,
-              onPressed: controller != null ? onAudioModeButtonPressed : null,
-            ),
             IconButton(
               icon: Icon(controller?.value.isCaptureOrientationLocked ?? false
                   ? Icons.screen_lock_rotation
@@ -567,8 +562,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       CameraDescription cameraDescription) async {
     controller = CameraController(
       cameraDescription,
-      kIsWeb ? ResolutionPreset.max : ResolutionPreset.medium,
-      enableAudio: enableAudio,
+      ResolutionPreset.low,
+      enableAudio: false,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
 
@@ -664,13 +659,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       _focusModeControlRowAnimationController.forward();
       _flashModeControlRowAnimationController.reverse();
       _exposureModeControlRowAnimationController.reverse();
-    }
-  }
-
-  void onAudioModeButtonPressed() {
-    enableAudio = !enableAudio;
-    if (controller != null) {
-      onNewCameraSelected(controller!.description);
     }
   }
 

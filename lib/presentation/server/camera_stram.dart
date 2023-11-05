@@ -80,7 +80,12 @@ class CameraInitializationWidget extends StatelessWidget {
           switch (snapshot.connectionState) {
             case ConnectionState.done:
               return CameraPreviewPage(
-                camera: snapshot.data![0],
+                cameraController: CameraController(
+                  snapshot.data![0],
+                  ResolutionPreset.low,
+                  enableAudio: false,
+                  imageFormatGroup: ImageFormatGroup.jpeg,
+                ),
                 onTakePicture: (Uint8List uint8list) {},
               );
             default:
@@ -95,13 +100,12 @@ class CameraInitializationWidget extends StatelessWidget {
 }
 
 class CameraPreviewPage extends StatefulWidget {
-  final CameraDescription camera;
-
   /// Default Constructor
   const CameraPreviewPage(
-      {super.key, required this.camera, required this.onTakePicture});
+      {super.key, required this.cameraController, required this.onTakePicture});
 
   final void Function(Uint8List uint8list) onTakePicture;
+  final CameraController cameraController;
 
   @override
   State<CameraPreviewPage> createState() => _CameraPreviewPageState();
@@ -129,14 +133,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
     WidgetsBinding.instance.addObserver(this);
     _cameraControllerStore = ValueNotifier(
       CameraController(
-        widget.camera,
-        ResolutionPreset.max,
+        widget.cameraController.description,
+        ResolutionPreset.low,
       ),
     );
 
     _cameraLifeCycleHandler = kBuildCameraLifeCycleHandler(
-      widget.camera,
-      ResolutionPreset.max,
+      widget.cameraController.description,
+      ResolutionPreset.low,
     );
   }
 
