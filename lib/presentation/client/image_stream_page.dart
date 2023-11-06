@@ -7,7 +7,12 @@ import 'package:cbj_smart_device_flutter/presentation/client/smart_device_client
 import 'package:flutter/material.dart';
 
 class ImageStreamPage extends StatefulWidget {
-  const ImageStreamPage({super.key});
+  const ImageStreamPage({
+    super.key,
+    required this.serverIp,
+  });
+
+  final String serverIp;
 
   @override
   State<ImageStreamPage> createState() => _ImageStreamPageState();
@@ -18,7 +23,8 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
   ui.Image? image;
 
   Future videoStream() async {
-    await smartDeviceClient.createStreamWithSmartDevice('192.168.31.75', 50054);
+    await smartDeviceClient.createStreamWithSmartDevice(
+        widget.serverIp, CbjSmartDeviceServerU.port);
 
     print('Listen to Stream');
 
@@ -28,8 +34,6 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
 
     SmartDeviceServerRequestsToSmartDeviceClient.steam.stream
         .listen((value) async {
-      print(
-          'Value from Stream ${value.allRemoteCommands.smartDeviceInfo.stateMassage}');
       List<int> bytes = json
           .decode(value.allRemoteCommands.smartDeviceInfo.stateMassage)
           .cast<int>();
@@ -62,11 +66,6 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(width: double.infinity),
-          TextButton(
-            onPressed: () {},
-            child: const Text('This is image steam'),
-          ),
           if (image != null)
             Expanded(
               child: RawImage(

@@ -32,7 +32,8 @@ class HomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ImageStreamPage(),
+                  builder: (context) =>
+                      const ImageStreamPage(serverIp: '192.168.31.75'),
                 ),
               );
             },

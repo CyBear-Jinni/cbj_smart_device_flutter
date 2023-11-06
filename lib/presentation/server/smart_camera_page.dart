@@ -14,8 +14,6 @@ class SmartCameraPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(width: double.infinity),
-          Text('This is Smart Camera'),
           Expanded(
             child: CameraExampleHome(),
           ),
