@@ -161,14 +161,14 @@ class _CameraPreviewPageState extends State<CameraPreviewPage>
           floatingActionButton: FloatingActionButton(
             child: const Icon(Icons.camera),
             onPressed: () async {
-              while (true) {
-                try {
-                  widget.onTakePicture(await cameraController.inMemoryImage);
-                } catch (e) {
-                  debugPrint('$e');
-                  return;
-                }
+              // while (true) {
+              try {
+                widget.onTakePicture(await cameraController.inMemoryImage);
+              } catch (e) {
+                debugPrint('$e');
+                return;
               }
+              // }
             },
           ),
         ),

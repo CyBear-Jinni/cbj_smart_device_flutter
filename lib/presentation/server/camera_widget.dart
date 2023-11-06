@@ -46,6 +46,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   CbjSmartDeviceServerU? smartServerUseCase;
 
+  double _currentScale = 1.0;
+  double _baseScale = 1.0;
+
+  // Counting pointers (number of user fingers on screen)
+  int _pointers = 0;
+
   @override
   void initState() {
     super.initState();
@@ -113,6 +119,33 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
+  Future<Uint8List?> takePicture() async {
+    if (controller == null || !controller!.value.isInitialized) {
+      showInSnackBar('Error: select a camera first.');
+      return null;
+    }
+
+    if (controller!.value.isTakingPicture) {
+      // A capture is already pending, do nothing.
+      return null;
+    }
+    Uint8List uint8list;
+
+    try {
+      XFile xfile = await controller!.takePicture();
+
+      uint8list = await xfile.readAsBytes();
+
+      File image = File(xfile.path);
+      await image.delete();
+    } on CameraException catch (e) {
+      _showCameraException(e);
+      return null;
+    }
+
+    return uint8list;
+  }
+
   Future<Uint8List?> getImageBytes() async {
     if (controller == null || !controller!.value.isInitialized) {
       showInSnackBar('Error: select a camera first.');
@@ -128,13 +161,20 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     return image;
   }
 
-  void onTakePicture(Uint8List uint8list) async {
-    print('unit8List size ${uint8list.length}');
-    SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
-        CbjRequestsAndStatusFromHub(
-            allRemoteCommands: CbjAllRemoteCommands(
-                smartDeviceInfo:
-                    CbjSmartDeviceInfo(stateMassage: uint8list.toString()))));
+  void onTakePicture() async {
+    while (true) {
+      Uint8List? uint8list = await takePicture();
+      if (uint8list == null) {
+        return;
+      }
+
+      print('unit8List size ${uint8list.length}');
+      SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
+          CbjRequestsAndStatusFromHub(
+              allRemoteCommands: CbjAllRemoteCommands(
+                  smartDeviceInfo:
+                      CbjSmartDeviceInfo(stateMassage: uint8list.toString()))));
+    }
   }
 
   // #enddocregion AppLifecycle
@@ -192,26 +232,26 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         ),
       );
     } else {
-      return CameraPreviewPage(
-          cameraController: controller!, onTakePicture: onTakePicture);
+      // return CameraPreviewPage(
+      //     cameraController: controller!, onTakePicture: onTakePicture);
 
-      // return Listener(
-      //   onPointerDown: (_) => _pointers++,
-      //   onPointerUp: (_) => _pointers--,
-      //   child: CameraPreview(
-      //     controller!,
-      //     child: LayoutBuilder(
-      //         builder: (BuildContext context, BoxConstraints constraints) {
-      //       return GestureDetector(
-      //         behavior: HitTestBehavior.opaque,
-      //         onScaleStart: _handleScaleStart,
-      //         onScaleUpdate: _handleScaleUpdate,
-      //         onTapDown: (TapDownDetails details) =>
-      //             onViewFinderTap(details, constraints),
-      //       );
-      //     }),
-      //   ),
-      // );
+      return Listener(
+        onPointerDown: (_) => _pointers++,
+        onPointerUp: (_) => _pointers--,
+        child: CameraPreview(
+          controller!,
+          child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onScaleStart: _handleScaleStart,
+              onScaleUpdate: _handleScaleUpdate,
+              onTapDown: (TapDownDetails details) =>
+                  onViewFinderTap(details, constraints),
+            );
+          }),
+        ),
+      );
     }
   }
 
@@ -250,6 +290,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
+            IconButton(
+              icon: const Icon(Icons.camera),
+              color: Colors.blue,
+              onPressed: onTakePicture,
+            ),
             IconButton(
               icon: const Icon(Icons.flash_on),
               color: Colors.blue,
@@ -562,7 +607,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       CameraDescription cameraDescription) async {
     controller = CameraController(
       cameraDescription,
-      ResolutionPreset.low,
+      ResolutionPreset.medium,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
@@ -764,5 +809,38 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   void _showCameraException(CameraException e) {
     _logError(e.code, e.description);
     showInSnackBar('Error: ${e.code}\n${e.description}');
+  }
+
+  void _handleScaleStart(ScaleStartDetails details) {
+    _baseScale = _currentScale;
+  }
+
+  Future<void> _handleScaleUpdate(ScaleUpdateDetails details) async {
+    // When there are not exactly two fingers on screen don't scale
+    if (controller == null || _pointers != 2) {
+      return;
+      // return Listener(
+      //   onPointerDown: (_) => _pointers++,
+      //   onPointerUp: (_) => _pointers--,
+      //   child: CameraPreview(
+      //     controller!,
+      //     child: LayoutBuilder(
+      //         builder: (BuildContext context, BoxConstraints constraints) {
+      //       return GestureDetector(
+      //         behavior: HitTestBehavior.opaque,
+      //         onScaleStart: _handleScaleStart,
+      //         onScaleUpdate: _handleScaleUpdate,
+      //         onTapDown: (TapDownDetails details) =>
+      //             onViewFinderTap(details, constraints),
+      //       );
+      //     }),
+      //   ),
+      // );
+    }
+
+    _currentScale = (_baseScale * details.scale)
+        .clamp(_minAvailableZoom, _maxAvailableZoom);
+
+    await controller!.setZoomLevel(_currentScale);
   }
 }
