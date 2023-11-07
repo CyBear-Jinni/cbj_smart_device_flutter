@@ -57,6 +57,12 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
   }
 
   @override
+  void dispose() async {
+    smartDeviceClient.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
@@ -68,9 +74,11 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
         children: [
           if (image != null)
             Expanded(
-              child: RawImage(
-                image: image,
-                fit: BoxFit.scaleDown,
+              child: Center(
+                child: RawImage(
+                  image: image,
+                  fit: BoxFit.scaleDown,
+                ),
               ),
             ),
         ],

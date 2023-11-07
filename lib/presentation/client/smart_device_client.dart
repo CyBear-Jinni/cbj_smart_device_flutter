@@ -9,6 +9,11 @@ class SmartDeviceClient {
   ClientChannel? channel;
   CbjSmartDeviceConnectionsClient? stub;
 
+  Future dispose() async {
+    await channel?.shutdown();
+    await channel?.terminate();
+  }
+
   Future createStreamWithSmartDevice(
     String addressToHub,
     int hubPort,

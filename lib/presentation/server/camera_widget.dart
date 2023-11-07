@@ -35,8 +35,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   double _minAvailableExposureOffset = 0.0;
   double _maxAvailableExposureOffset = 0.0;
   double _currentExposureOffset = 0.0;
-  late AnimationController _flashModeControlRowAnimationController;
-  late Animation<double> _flashModeControlRowAnimation;
   late AnimationController _exposureModeControlRowAnimationController;
   late Animation<double> _exposureModeControlRowAnimation;
   late AnimationController _focusModeControlRowAnimationController;
@@ -51,6 +49,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
   // Counting pointers (number of user fingers on screen)
   int _pointers = 0;
+  bool sendPictures = true;
 
   @override
   void initState() {
@@ -64,20 +63,16 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         setState(() {
           cameras = value;
         });
+        smartServerUseCase = CbjSmartDeviceServerU();
+        smartServerUseCase!.startLocalServer().then((value) async {
+          if (cameras!.isEmpty) {
+            return;
+          }
+          await onNewCameraSelected(cameras![0]);
+        });
       });
     }
 
-    smartServerUseCase = CbjSmartDeviceServerU();
-    smartServerUseCase!.startLocalServer();
-
-    _flashModeControlRowAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _flashModeControlRowAnimation = CurvedAnimation(
-      parent: _flashModeControlRowAnimationController,
-      curve: Curves.easeInCubic,
-    );
     _exposureModeControlRowAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -97,10 +92,12 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   }
 
   @override
-  void dispose() {
+  void dispose() async {
     WidgetsBinding.instance.removeObserver(this);
-    _flashModeControlRowAnimationController.dispose();
     _exposureModeControlRowAnimationController.dispose();
+    await controller?.dispose();
+    sendPictures = false;
+    await smartServerUseCase?.dispose();
     super.dispose();
   }
 
@@ -135,7 +132,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       XFile xfile = await controller!.takePicture();
 
       uint8list = await xfile.readAsBytes();
-
       File image = File(xfile.path);
       await image.delete();
     } on CameraException catch (e) {
@@ -162,7 +158,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   }
 
   void onTakePicture() async {
-    while (true) {
+    while (true && sendPictures) {
       Uint8List? uint8list = await takePicture();
       if (uint8list == null) {
         return;
@@ -290,16 +286,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.camera),
-              color: Colors.blue,
-              onPressed: onTakePicture,
-            ),
-            IconButton(
-              icon: const Icon(Icons.flash_on),
-              color: Colors.blue,
-              onPressed: controller != null ? onFlashModeButtonPressed : null,
-            ),
             // The exposure and focus mode are currently not supported on the web.
             ...!kIsWeb
                 ? <Widget>[
@@ -329,59 +315,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
             ),
           ],
         ),
-        _flashModeControlRowWidget(),
         _exposureModeControlRowWidget(),
         _focusModeControlRowWidget(),
       ],
-    );
-  }
-
-  Widget _flashModeControlRowWidget() {
-    return SizeTransition(
-      sizeFactor: _flashModeControlRowAnimation,
-      child: ClipRect(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.flash_off),
-              color: controller?.value.flashMode == FlashMode.off
-                  ? Colors.orange
-                  : Colors.blue,
-              onPressed: controller != null
-                  ? () => onSetFlashModeButtonPressed(FlashMode.off)
-                  : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.flash_auto),
-              color: controller?.value.flashMode == FlashMode.auto
-                  ? Colors.orange
-                  : Colors.blue,
-              onPressed: controller != null
-                  ? () => onSetFlashModeButtonPressed(FlashMode.auto)
-                  : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.flash_on),
-              color: controller?.value.flashMode == FlashMode.always
-                  ? Colors.orange
-                  : Colors.blue,
-              onPressed: controller != null
-                  ? () => onSetFlashModeButtonPressed(FlashMode.always)
-                  : null,
-            ),
-            IconButton(
-              icon: const Icon(Icons.highlight),
-              color: controller?.value.flashMode == FlashMode.torch
-                  ? Colors.orange
-                  : Colors.blue,
-              onPressed: controller != null
-                  ? () => onSetFlashModeButtonPressed(FlashMode.torch)
-                  : null,
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -595,12 +531,15 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     if (cameraDescription == null) {
       return;
     }
+    sendPictures = false;
 
-    if (controller != null) {
-      return controller!.setDescription(cameraDescription);
-    } else {
-      return _initializeCameraController(cameraDescription);
-    }
+    // if (controller != null) {
+    //   await controller!.setDescription(cameraDescription);
+    // } else {
+    await _initializeCameraController(cameraDescription);
+    // }
+    sendPictures = true;
+    onTakePicture();
   }
 
   Future<void> _initializeCameraController(
@@ -617,6 +556,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       if (mounted) {
         setState(() {});
       }
+
       if (controller!.value.hasError) {
         showInSnackBar('Camera error ${controller!.value.errorDescription}');
       }
@@ -624,6 +564,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
 
     try {
       await controller!.initialize();
+
       await Future.wait(<Future<Object?>>[
         // The exposure mode is currently not supported on the web.
         ...!kIsWeb
@@ -641,7 +582,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         controller!
             .getMinZoomLevel()
             .then((double value) => _minAvailableZoom = value),
+        controller!.setDescription(cameraDescription),
       ]);
+      await controller!.setFlashMode(FlashMode.off);
     } on CameraException catch (e) {
       switch (e.code) {
         case 'CameraAccessDenied':
@@ -677,22 +620,11 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  void onFlashModeButtonPressed() {
-    if (_flashModeControlRowAnimationController.value == 1) {
-      _flashModeControlRowAnimationController.reverse();
-    } else {
-      _flashModeControlRowAnimationController.forward();
-      _exposureModeControlRowAnimationController.reverse();
-      _focusModeControlRowAnimationController.reverse();
-    }
-  }
-
   void onExposureModeButtonPressed() {
     if (_exposureModeControlRowAnimationController.value == 1) {
       _exposureModeControlRowAnimationController.reverse();
     } else {
       _exposureModeControlRowAnimationController.forward();
-      _flashModeControlRowAnimationController.reverse();
       _focusModeControlRowAnimationController.reverse();
     }
   }
@@ -702,7 +634,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       _focusModeControlRowAnimationController.reverse();
     } else {
       _focusModeControlRowAnimationController.forward();
-      _flashModeControlRowAnimationController.reverse();
       _exposureModeControlRowAnimationController.reverse();
     }
   }
@@ -724,15 +655,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  void onSetFlashModeButtonPressed(FlashMode mode) {
-    setFlashMode(mode).then((_) {
-      if (mounted) {
-        setState(() {});
-      }
-      showInSnackBar('Flash mode set to ${mode.toString().split('.').last}');
-    });
-  }
-
   void onSetExposureModeButtonPressed(ExposureMode mode) {
     setExposureMode(mode).then((_) {
       if (mounted) {
@@ -749,19 +671,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       }
       showInSnackBar('Focus mode set to ${mode.toString().split('.').last}');
     });
-  }
-
-  Future<void> setFlashMode(FlashMode mode) async {
-    if (controller == null) {
-      return;
-    }
-
-    try {
-      await controller!.setFlashMode(mode);
-    } on CameraException catch (e) {
-      _showCameraException(e);
-      rethrow;
-    }
   }
 
   Future<void> setExposureMode(ExposureMode mode) async {
