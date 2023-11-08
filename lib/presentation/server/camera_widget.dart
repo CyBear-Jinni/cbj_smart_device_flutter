@@ -12,6 +12,7 @@ import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:wakelock/wakelock.dart';
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -37,6 +38,8 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   double _currentExposureOffset = 0.0;
   late AnimationController _exposureModeControlRowAnimationController;
   late Animation<double> _exposureModeControlRowAnimation;
+  late AnimationController _streamQualityModeControlRowAnimationController;
+  late Animation<double> _streamQualityModeControlRowAnimation;
   late AnimationController _focusModeControlRowAnimationController;
   late Animation<double> _focusModeControlRowAnimation;
   double _minAvailableZoom = 1.0;
@@ -54,6 +57,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   @override
   void initState() {
     super.initState();
+    Wakelock.enable();
     WidgetsBinding.instance.addObserver(this);
     if (Platform.isAndroid || Platform.isIOS) {
       availableCameras().then((value) {
@@ -73,31 +77,36 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
       });
     }
 
-    _exposureModeControlRowAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _exposureModeControlRowAnimation = CurvedAnimation(
-      parent: _exposureModeControlRowAnimationController,
-      curve: Curves.easeInCubic,
-    );
-    _focusModeControlRowAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _focusModeControlRowAnimation = CurvedAnimation(
-      parent: _focusModeControlRowAnimationController,
-      curve: Curves.easeInCubic,
-    );
+    _exposureModeControlRowAnimationController = basicAnimation;
+    _exposureModeControlRowAnimation =
+        getCurvedAnimation(parent: _exposureModeControlRowAnimationController);
+
+    _streamQualityModeControlRowAnimationController = basicAnimation;
+    _streamQualityModeControlRowAnimation = getCurvedAnimation(
+        parent: _streamQualityModeControlRowAnimationController);
+
+    _focusModeControlRowAnimationController = basicAnimation;
+    _focusModeControlRowAnimation =
+        getCurvedAnimation(parent: _focusModeControlRowAnimationController);
   }
 
+  AnimationController get basicAnimation => AnimationController(
+        duration: const Duration(milliseconds: 300),
+        vsync: this,
+      );
+
+  CurvedAnimation getCurvedAnimation({required AnimationController parent}) =>
+      CurvedAnimation(parent: parent, curve: Curves.easeInCubic);
+
   @override
-  void dispose() async {
-    WidgetsBinding.instance.removeObserver(this);
-    _exposureModeControlRowAnimationController.dispose();
-    await controller?.dispose();
+  void dispose() {
     sendPictures = false;
-    await smartServerUseCase?.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    controller?.dispose();
+    controller = null;
+    smartServerUseCase?.dispose();
+    Wakelock.disable();
+
     super.dispose();
   }
 
@@ -208,7 +217,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
           child: Row(
             children: <Widget>[
               _cameraTogglesRowWidget(),
-              _thumbnailWidget(),
             ],
           ),
         ),
@@ -251,34 +259,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  /// Display the thumbnail of the captured image or video.
-  Widget _thumbnailWidget() {
-    return Expanded(
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (imageFile == null)
-              Container()
-            else
-              SizedBox(
-                  width: 64.0,
-                  height: 64.0,
-                  child:
-                      // The captured image on the web contains a network-accessible URL
-                      // pointing to a location within the browser. It may be displayed
-                      // either with Image.network or Image.memory after loading the image
-                      // bytes to memory.
-                      kIsWeb
-                          ? Image.network(imageFile!.path)
-                          : Image.file(File(imageFile!.path))),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Display a bar with buttons to change the flash and exposure modes
   Widget _modeControlRowWidget() {
     return Column(
@@ -290,17 +270,20 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
             ...!kIsWeb
                 ? <Widget>[
                     IconButton(
+                      icon: const Icon(Icons.high_quality),
+                      color: Colors.blue,
+                      onPressed:
+                          controller != null ? onChangeImageQualityMode : null,
+                    ),
+                    IconButton(
                       icon: const Icon(Icons.exposure),
                       color: Colors.blue,
-                      onPressed: controller != null
-                          ? onExposureModeButtonPressed
-                          : null,
+                      onPressed: controller != null ? onExposureMode : null,
                     ),
                     IconButton(
                       icon: const Icon(Icons.filter_center_focus),
                       color: Colors.blue,
-                      onPressed:
-                          controller != null ? onFocusModeButtonPressed : null,
+                      onPressed: controller != null ? onFocusMode : null,
                     )
                   ]
                 : <Widget>[],
@@ -309,14 +292,13 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                   ? Icons.screen_lock_rotation
                   : Icons.screen_rotation),
               color: Colors.blue,
-              onPressed: controller != null
-                  ? onCaptureOrientationLockButtonPressed
-                  : null,
+              onPressed: controller != null ? onCaptureOrientationLock : null,
             ),
           ],
         ),
         _exposureModeControlRowWidget(),
         _focusModeControlRowWidget(),
+        _streamQualityModeControlRowWidget(),
       ],
     );
   }
@@ -395,6 +377,86 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                         : setExposureOffset,
                   ),
                   Text(_maxAvailableExposureOffset.toString()),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _streamQualityModeControlRowWidget() {
+    return SizeTransition(
+      sizeFactor: _streamQualityModeControlRowAnimation,
+      child: ClipRect(
+        child: Container(
+          color: Colors.grey.shade50,
+          child: Column(
+            children: <Widget>[
+              const Center(
+                child: Text('Stream Quality'),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: <Widget>[
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          controller?.resolutionPreset == ResolutionPreset.low
+                              ? Colors.orange
+                              : Colors.blue,
+                    ),
+                    onPressed: controller != null
+                        ? () => onNewCameraSelected(controller!.description,
+                            resolutionPreset: ResolutionPreset.low)
+                        : null,
+                    child: const Text('Low Resolution'),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: controller?.resolutionPreset ==
+                              ResolutionPreset.medium
+                          ? Colors.orange
+                          : Colors.blue,
+                    ),
+                    onPressed: controller != null
+                        ? () => onNewCameraSelected(controller!.description,
+                            resolutionPreset: ResolutionPreset.medium)
+                        : null,
+                    child: const Text('medium'),
+                  ),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor:
+                          controller?.resolutionPreset == ResolutionPreset.high
+                              ? Colors.orange
+                              : Colors.blue,
+                    ),
+                    onPressed: controller != null
+                        ? () => onNewCameraSelected(controller!.description,
+                            resolutionPreset: ResolutionPreset.high)
+                        : null,
+                    child: const Text('high'),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: controller?.resolutionPreset ==
+                              ResolutionPreset.veryHigh
+                          ? Colors.orange
+                          : Colors.blue,
+                    ),
+                    onPressed: controller != null
+                        ? () => onNewCameraSelected(controller!.description,
+                            resolutionPreset: ResolutionPreset.veryHigh)
+                        : null,
+                    child: const Text('very high'),
+                  ),
                 ],
               ),
             ],
@@ -527,26 +589,25 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     controller!.setFocusPoint(offset);
   }
 
-  Future<void> onNewCameraSelected(CameraDescription? cameraDescription) async {
+  Future<void> onNewCameraSelected(CameraDescription? cameraDescription,
+      {ResolutionPreset resolutionPreset = ResolutionPreset.medium}) async {
     if (cameraDescription == null) {
       return;
     }
     sendPictures = false;
 
-    // if (controller != null) {
-    //   await controller!.setDescription(cameraDescription);
-    // } else {
-    await _initializeCameraController(cameraDescription);
-    // }
+    await _initializeCameraController(cameraDescription,
+        resolutionPreset: resolutionPreset);
+
     sendPictures = true;
     onTakePicture();
   }
 
-  Future<void> _initializeCameraController(
-      CameraDescription cameraDescription) async {
+  Future<void> _initializeCameraController(CameraDescription cameraDescription,
+      {ResolutionPreset resolutionPreset = ResolutionPreset.medium}) async {
     controller = CameraController(
       cameraDescription,
-      ResolutionPreset.medium,
+      resolutionPreset,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.jpeg,
     );
@@ -620,25 +681,46 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  void onExposureModeButtonPressed() {
+  Future<void> onChangeImageQualityMode() async {
+    if (_streamQualityModeControlRowAnimationController.value == 1) {
+      _streamQualityModeControlRowAnimationController.reverse();
+    } else {
+      if (_exposureModeControlRowAnimationController.value == 1) {
+        await _exposureModeControlRowAnimationController.reverse();
+      } else if (_focusModeControlRowAnimationController.value == 1) {
+        await _focusModeControlRowAnimationController.reverse();
+      }
+      _streamQualityModeControlRowAnimationController.forward();
+    }
+  }
+
+  Future<void> onExposureMode() async {
     if (_exposureModeControlRowAnimationController.value == 1) {
       _exposureModeControlRowAnimationController.reverse();
     } else {
+      if (_focusModeControlRowAnimationController.value == 1) {
+        await _focusModeControlRowAnimationController.reverse();
+      } else if (_streamQualityModeControlRowAnimationController.value == 1) {
+        await _streamQualityModeControlRowAnimationController.reverse();
+      }
       _exposureModeControlRowAnimationController.forward();
-      _focusModeControlRowAnimationController.reverse();
     }
   }
 
-  void onFocusModeButtonPressed() {
+  Future<void> onFocusMode() async {
     if (_focusModeControlRowAnimationController.value == 1) {
       _focusModeControlRowAnimationController.reverse();
     } else {
+      if (_exposureModeControlRowAnimationController.value == 1) {
+        await _exposureModeControlRowAnimationController.reverse();
+      } else if (_streamQualityModeControlRowAnimationController.value == 1) {
+        await _streamQualityModeControlRowAnimationController.reverse();
+      }
       _focusModeControlRowAnimationController.forward();
-      _exposureModeControlRowAnimationController.reverse();
     }
   }
 
-  Future<void> onCaptureOrientationLockButtonPressed() async {
+  Future<void> onCaptureOrientationLock() async {
     try {
       if (controller != null) {
         if (controller!.value.isCaptureOrientationLocked) {

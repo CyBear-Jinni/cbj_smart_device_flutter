@@ -5,6 +5,7 @@ import "dart:ui" as ui;
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
 import 'package:cbj_smart_device_flutter/presentation/client/smart_device_client.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock/wakelock.dart';
 
 class ImageStreamPage extends StatefulWidget {
   const ImageStreamPage({
@@ -53,12 +54,14 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
   @override
   void initState() {
     super.initState();
+    Wakelock.enable();
     videoStream();
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     smartDeviceClient.dispose();
+    Wakelock.disable();
     super.dispose();
   }
 
