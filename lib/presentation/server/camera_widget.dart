@@ -12,7 +12,7 @@ import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:wakelock/wakelock.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Camera example home widget.
 class CameraExampleHome extends StatefulWidget {
@@ -57,7 +57,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
   @override
   void initState() {
     super.initState();
-    Wakelock.enable();
+    WakelockPlus.enable();
     WidgetsBinding.instance.addObserver(this);
     if (Platform.isAndroid || Platform.isIOS) {
       availableCameras().then((value) {
@@ -105,7 +105,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     controller?.dispose();
     controller = null;
     smartServerUseCase?.dispose();
-    Wakelock.disable();
+    WakelockPlus.disable();
 
     super.dispose();
   }
@@ -411,7 +411,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
                         ? () => onNewCameraSelected(controller!.description,
                             resolutionPreset: ResolutionPreset.low)
                         : null,
-                    child: const Text('Low Resolution'),
+                    child: const Text('low'),
                   ),
                   TextButton(
                     style: TextButton.styleFrom(
