@@ -1,7 +1,7 @@
 name: cbj_smart_device_flutter
 description: A new Flutter project.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -10,8 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   cbj_smart_device:
-    path: ../cbj_smart_device
-#    git: https://github.com/guyluz11/cbj_smart_device.git
+#    path: ../cbj_smart_device
+    git: https://github.com/guyluz11/cbj_smart_device.git
   cupertino_icons: ^1.0.6
   image_picker: ^1.0.4
   camera: ^0.10.5+5
