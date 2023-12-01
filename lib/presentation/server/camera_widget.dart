@@ -7,11 +7,14 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_server/protoc_as_dart/cbj_smart_device_server.pbgrpc.dart';
+import 'package:cbj_smart_device/application/usecases/smart_device_objects_u/simple_devices/smart_camera_object.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
+import 'package:cbj_smart_device/core/my_singleton.dart';
 import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Camera example home widget.
@@ -68,6 +71,9 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
           cameras = value;
         });
         smartServerUseCase = CbjSmartDeviceServerU();
+        final String uuId = const Uuid().v1();
+        MySingleton()
+            .addToSmartDevicesList(SmartCameraObject(uuId, 'Security Camera'));
         smartServerUseCase!.startLocalServer().then((value) async {
           if (cameras!.isEmpty) {
             return;
