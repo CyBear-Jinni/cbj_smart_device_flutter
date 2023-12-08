@@ -94,3 +94,6 @@ lib/generated_plugin_registrant.dart
 
 # melos
 pubspec_overrides.yaml
+
+# Linux
+.directory
