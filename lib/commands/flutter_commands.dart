@@ -28,7 +28,6 @@ class PhoneCommandsD implements IPhoneCommandsD {
 
   @override
   Future<String> getAllEtcReleaseFilesText() {
-    //TODO: add implementation, for now will return getDeviceHostName
     return getDeviceHostName();
   }
 
@@ -46,8 +45,6 @@ class PhoneCommandsD implements IPhoneCommandsD {
     return '';
   }
 
-  //TODO: Currently does not work as echo %~dp0 will not work at the command
-  // line, only in a batch file.
   Future<String> getOsDriveLetter() async {
     return '';
   }
@@ -66,13 +63,11 @@ class PhoneCommandsD implements IPhoneCommandsD {
 
   @override
   Future<String?> suspendComputer() {
-    // TODO: implement goToSleep
     throw UnimplementedError();
   }
 
   @override
   Future<String?> shutdownComputer() {
-    // TODO: implement shutdownComputer
     throw UnimplementedError();
   }
 }
