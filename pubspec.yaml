@@ -1,7 +1,7 @@
 name: cbj_smart_device_flutter
 description: A new Flutter project.
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
-version: 1.0.4+5
+version: 1.0.5+6
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -12,7 +12,7 @@ dependencies:
   cbj_integrations_controller:
     git: https://github.com/CyBear-Jinni/cbj_integrations_controller.git
   cbj_smart_device:
-    git: https://github.com/guyluz11/cbj_smart_device.git
+    git: https://github.com/CyBear-Jinni/cbj_smart_device.git
   cupertino_icons: ^1.0.6
   # A high performance, open source, general RPC framework that puts mobile and HTTP/2 first.
   grpc: ^3.2.4
