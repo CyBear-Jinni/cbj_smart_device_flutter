@@ -91,3 +91,9 @@ lib/infrastructure/core/constant_credentials.dart
 
 # Web related
 lib/generated_plugin_registrant.dart
+
+# melos
+pubspec_overrides.yaml
+
+# Linux
+.directory

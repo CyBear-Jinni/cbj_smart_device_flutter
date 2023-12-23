@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:cbj_smart_device/utils.dart';
 import 'package:cbj_smart_device_flutter/commands/flutter_commands.dart';
 import 'package:cbj_smart_device_flutter/presentation/home_page.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +15,7 @@ Future<void> main() async {
     final appDocDirectory = await getApplicationDocumentsDirectory();
     await configureNetworkTools(appDocDirectory.path, enableDebugging: true);
   } on CameraException catch (e) {
-    print('${e.code} ${e.description}');
+    logger.i('${e.code} ${e.description}');
   }
 
   runApp(

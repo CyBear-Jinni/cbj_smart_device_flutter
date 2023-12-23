@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import "dart:ui" as ui;
 
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
+import 'package:cbj_smart_device/utils.dart';
 import 'package:cbj_smart_device_flutter/presentation/client/smart_device_client.dart';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -27,10 +28,10 @@ class _ImageStreamPageState extends State<ImageStreamPage> {
     await smartDeviceClient.createStreamWithSmartDevice(
         widget.serverIp, CbjSmartDeviceServerU.port);
 
-    print('Listen to Stream');
+    logger.i('Listen to Stream');
 
     ClientRequestsToSmartDeviceServer.steam.listen((event) {
-      print('Element from stream $event');
+      logger.i('Element from stream $event');
     });
 
     SmartDeviceServerRequestsToSmartDeviceClient.steam.stream

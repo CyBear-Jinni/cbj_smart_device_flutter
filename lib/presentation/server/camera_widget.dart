@@ -10,6 +10,7 @@ import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_
 import 'package:cbj_smart_device/application/usecases/smart_device_objects_u/simple_devices/smart_camera_object.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
 import 'package:cbj_smart_device/core/my_singleton.dart';
+import 'package:cbj_smart_device/utils.dart';
 import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -164,7 +165,6 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
 
     final completer = Completer<CameraImage>();
-    // TODO: Keep image stream open
     await controller!
         .startImageStream(completer.complete)
         .then((_) => controller!.stopImageStream());
@@ -179,7 +179,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
         return;
       }
 
-      print('unit8List size ${uint8list.length}');
+      logger.i('unit8List size ${uint8list.length}');
       SmartDeviceServerRequestsToSmartDeviceClient.steam.sink.add(
           CbjRequestsAndStatusFromHub(
               allRemoteCommands: CbjAllRemoteCommands(
