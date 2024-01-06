@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:cbj_integrations_controller/infrastructure/system_commands/phone_commands_d/common_batch_commands_d.dart';
+import 'package:cbj_integrations_controller/integrations_controller.dart';
 import 'package:path_provider/path_provider.dart';
 
 class PhoneCommandsD implements IPhoneCommandsD {

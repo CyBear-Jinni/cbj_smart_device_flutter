@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:cbj_integrations_controller/infrastructure/gen/cbj_smart_device_server/protoc_as_dart/cbj_smart_device_server.pbgrpc.dart';
+import 'package:cbj_integrations_controller/integrations_controller.dart';
 import 'package:cbj_smart_device/application/usecases/smart_device_objects_u/simple_devices/smart_camera_object.dart';
 import 'package:cbj_smart_device/application/usecases/smart_server_u/smart_server_u.dart';
 import 'package:cbj_smart_device/core/my_singleton.dart';
