@@ -595,7 +595,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     controller!.setFocusPoint(offset);
   }
 
-  Future<void> onNewCameraSelected(CameraDescription? cameraDescription,
+  Future onNewCameraSelected(CameraDescription? cameraDescription,
       {ResolutionPreset resolutionPreset = ResolutionPreset.medium}) async {
     if (cameraDescription == null) {
       return;
@@ -609,7 +609,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     onTakePicture();
   }
 
-  Future<void> _initializeCameraController(CameraDescription cameraDescription,
+  Future _initializeCameraController(CameraDescription cameraDescription,
       {ResolutionPreset resolutionPreset = ResolutionPreset.medium}) async {
     controller = CameraController(
       cameraDescription,
@@ -687,7 +687,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> onChangeImageQualityMode() async {
+  Future onChangeImageQualityMode() async {
     if (_streamQualityModeControlRowAnimationController.value == 1) {
       _streamQualityModeControlRowAnimationController.reverse();
     } else {
@@ -700,7 +700,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> onExposureMode() async {
+  Future onExposureMode() async {
     if (_exposureModeControlRowAnimationController.value == 1) {
       _exposureModeControlRowAnimationController.reverse();
     } else {
@@ -713,7 +713,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> onFocusMode() async {
+  Future onFocusMode() async {
     if (_focusModeControlRowAnimationController.value == 1) {
       _focusModeControlRowAnimationController.reverse();
     } else {
@@ -726,7 +726,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> onCaptureOrientationLock() async {
+  Future onCaptureOrientationLock() async {
     try {
       if (controller != null) {
         if (controller!.value.isCaptureOrientationLocked) {
@@ -761,7 +761,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     });
   }
 
-  Future<void> setExposureMode(ExposureMode mode) async {
+  Future setExposureMode(ExposureMode mode) async {
     if (controller == null) {
       return;
     }
@@ -774,7 +774,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> setExposureOffset(double offset) async {
+  Future setExposureOffset(double offset) async {
     if (controller == null) {
       return;
     }
@@ -790,7 +790,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     }
   }
 
-  Future<void> setFocusMode(FocusMode mode) async {
+  Future setFocusMode(FocusMode mode) async {
     if (controller == null) {
       return;
     }
@@ -812,7 +812,7 @@ class _CameraExampleHomeState extends State<CameraExampleHome>
     _baseScale = _currentScale;
   }
 
-  Future<void> _handleScaleUpdate(ScaleUpdateDetails details) async {
+  Future _handleScaleUpdate(ScaleUpdateDetails details) async {
     // When there are not exactly two fingers on screen don't scale
     if (controller == null || _pointers != 2) {
       return;

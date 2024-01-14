@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:network_tools_flutter/network_tools_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
-Future<void> main() async {
+Future main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     PhoneCommandsD();
