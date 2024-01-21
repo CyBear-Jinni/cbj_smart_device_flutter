@@ -5,15 +5,13 @@ import 'package:cbj_smart_device/utils.dart';
 import 'package:cbj_smart_device_flutter/commands/flutter_commands.dart';
 import 'package:cbj_smart_device_flutter/presentation/home_page.dart';
 import 'package:flutter/material.dart';
-import 'package:network_tools_flutter/network_tools_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 
 Future main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     PhoneCommandsD();
-    final appDocDirectory = await getApplicationDocumentsDirectory();
-    await configureNetworkTools(appDocDirectory.path, enableDebugging: true);
+    await getApplicationDocumentsDirectory();
   } on CameraException catch (e) {
     logger.i('${e.code} ${e.description}');
   }
