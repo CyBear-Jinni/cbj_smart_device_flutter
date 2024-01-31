@@ -3,11 +3,7 @@ import 'dart:io';
 import 'package:cbj_integrations_controller/integrations_controller.dart';
 import 'package:path_provider/path_provider.dart';
 
-class PhoneCommandsD implements IPhoneCommandsD {
-  PhoneCommandsD() {
-    IPhoneCommandsD.instance = this;
-  }
-
+class PhoneCommandsD extends SystemCommandsBaseClassD {
   String? currentUserName;
   String? currentDriveLetter;
 
@@ -50,9 +46,7 @@ class PhoneCommandsD implements IPhoneCommandsD {
   }
 
   @override
-  Future<String> getLocalDbPath(
-    Future<String?> currentUserName,
-  ) async {
+  Future<String> getLocalDbPath() async {
     return (await getApplicationDocumentsDirectory()).path;
   }
 
@@ -67,7 +61,8 @@ class PhoneCommandsD implements IPhoneCommandsD {
   }
 
   @override
-  Future<String?> shutdownComputer() {
-    throw UnimplementedError();
-  }
+  Future<String?> shutdownComputer() async => null;
+
+  @override
+  Future<String?> getRaspberryPiDeviceVersion() async => null;
 }
