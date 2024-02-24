@@ -15,6 +15,7 @@ import 'package:cbj_smart_device_flutter/presentation/server/camera_stram.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+// ignore: depend_on_referenced_packages
 import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
