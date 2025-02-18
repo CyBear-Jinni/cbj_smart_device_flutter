@@ -9,8 +9,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cbj_integrations_controller:
-    git: https://github.com/CyBear-Jinni/cbj_integrations_controller.git
   cbj_smart_device:
     git: https://github.com/CyBear-Jinni/cbj_smart_device.git
   cupertino_icons: ^1.0.6
@@ -18,8 +16,7 @@ dependencies:
   grpc: ^3.2.4
   image_picker: ^1.0.4
   camera: ^0.10.5+5
-  network_tools_flutter: ^1.0.4
-  network_tools: ^4.0.2
+  network_tools_flutter: ^2.0.3
   path_provider: ^2.1.1
   # Simple, fast generation of RFC4122 UUIDs.
   uuid: ^4.2.1
